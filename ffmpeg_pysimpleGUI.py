@@ -5,6 +5,7 @@ import subprocess
 import threading
 
 import PySimpleGUI as sg
+from PySimpleGUI import Window
 
 resolution_16_9 = ["1920x1080", "1280x720", "720x406"]
 
@@ -12,7 +13,7 @@ base_dir = os.path.dirname(os.path.realpath(__file__))
 
 
 class MainGui:
-    def __init__(self):
+    def __init__(self) -> None:
         self.layout = []
 
         # 入力ファイル名設定
@@ -43,10 +44,10 @@ class MainGui:
         self.layout.append([[self.buttonBTM]])
 
         self.main_window = sg.Window("FFMEPG-GUI", self.layout)
-        self.windows = []
+        self.windows: list[Window] = []
         self.windows.append(self.main_window)
 
-    def start(self):
+    def start(self) -> None:
         should_exit = False
         while not should_exit:
             for window in self.windows:
@@ -61,7 +62,7 @@ class MainGui:
                     self.on_buttonBTM_changed(values)
         logging.info("アプリ終了")
 
-    def on_buttonBTM_changed(self, values):
+    def on_buttonBTM_changed(self, values) -> None:
 
         input_file_path = values["input_file_path"]
         output_file_path = values["output_file_path"]
@@ -92,7 +93,7 @@ class MainGui:
                 return  # 実行しない
             additional_options.extend(["-y"])
 
-        COMMAND = []
+        COMMAND: list[str] = []
         COMMAND.extend(["ffmpeg", "-i", f'"{input_file_path}"'])
         COMMAND.extend(additional_options)
         COMMAND.extend(["-hide_banner", f'"{output_file_path}"'])
@@ -102,7 +103,7 @@ class MainGui:
         t.daemon = True
         t.start()
 
-    def RunEncode(self, command_list):
+    def RunEncode(self, command_list: list[str]) -> None:
         try:
             cmd = " ".join(command_list)
             logging.info(f"command:\t{cmd}")
