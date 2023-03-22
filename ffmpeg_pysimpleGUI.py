@@ -1,112 +1,119 @@
-
 #!/usr/bin/env python3
+import logging
 import os
 import subprocess
-import PySimpleGUI as sg
 import threading
-import logging
+
+import PySimpleGUI as sg
+from PySimpleGUI import Element, Window
 
 resolution_16_9 = ["1920x1080", "1280x720", "720x406"]
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
 
+
 class MainGui:
-	
-	def __init__(self):
-		self.layout = []
+    def __init__(self) -> None:
+        self.layout: list[Element] = []
 
-		# 入力ファイル名設定
-		self.label_in = sg.Text("入力ファイル名")
-		self.textbox_in = sg.Input()
-		self.button_in = sg.FileBrowse('ファイルを選択', key="input_file_path")
-		self.layout.append([self.label_in, self.textbox_in, self.button_in])
+        # 入力ファイル名設定
+        self.label_in = sg.Text("入力ファイル名")
+        self.textbox_in = sg.Input()
+        self.button_in = sg.FileBrowse("ファイルを選択", key="input_file_path")
+        self.layout.append([self.label_in, self.textbox_in, self.button_in])
 
-		# 出力ファイル名設定
-		self.label_out = sg.Text("出力ファイル名")
-		self.textbox_out = sg.Input()
-		self.button_out = sg.FileBrowse('ファイルを選択', key="output_file_path")
-		self.layout.append([self.label_out, self.textbox_out, self.button_out])
+        # 出力ファイル名設定
+        self.label_out = sg.Text("出力ファイル名")
+        self.textbox_out = sg.Input()
+        self.button_out = sg.FileBrowse("ファイルを選択", key="output_file_path")
+        self.layout.append([self.label_out, self.textbox_out, self.button_out])
 
-		# 解像度
-		self.comboRes = [sg.Text("解像度"), sg.Combo(values=resolution_16_9, key="resolution")]
-		self.layout.append(self.comboRes)
+        # 解像度
+        self.comboRes = [
+            sg.Text("解像度"),
+            sg.Combo(values=resolution_16_9, key="resolution"),
+        ]
+        self.layout.append(self.comboRes)
 
-		# 倍速
-		self.input_xpd = [sg.Text("x倍速設定"), sg.Input(key="xspd")]
-		self.layout.append(self.input_xpd)
+        # 倍速
+        self.input_xpd = [sg.Text("x倍速設定"), sg.Input(key="xspd")]
+        self.layout.append(self.input_xpd)
 
-		# 実行ボタン
-		self.buttonBTM = sg.Button('実行', key='run')
-		self.layout.append([[self.buttonBTM]])
+        # 実行ボタン
+        self.buttonBTM = sg.Button("実行", key="run")
+        self.layout.append([[self.buttonBTM]])
 
-		self.main_window = sg.Window('FFMEPG-GUI', self.layout)
-		self.windows = []
-		self.windows.append(self.main_window)
-			
-	def start(self):
-		should_exit = False
-		while not should_exit:
-			for window in self.windows:
-				event, values = window.read()
+        self.main_window = sg.Window("FFMEPG-GUI", self.layout)
+        self.windows: list[Window] = []
+        self.windows.append(self.main_window)
 
-				if event == sg.WIN_CLOSED: #ウィンドウのXボタンを押したときの処理
-					window.close()
-					if window == self.main_window:
-						should_exit = True
-				
-				if event == "run":
-					self.on_buttonBTM_changed(values)
-		logging.info("アプリ終了")
-	
-	def on_buttonBTM_changed(self, values):
+    def start(self) -> None:
+        should_exit = False
+        while not should_exit:
+            for window in self.windows:
+                event, values = window.read()
 
-		input_file_path = values["input_file_path"]
-		output_file_path = values["output_file_path"]
+                if event == sg.WIN_CLOSED:  # ウィンドウのXボタンを押したときの処理
+                    window.close()
+                    if window == self.main_window:
+                        should_exit = True
 
-		if output_file_path == "":
-			p1 = os.path.dirname(input_file_path)
-			p2 = os.path.basename(input_file_path)
-			output_file_path = f"{p1}/out_{p2}"
-		
-		additional_options = []
-		if values["resolution"] != "":
-			additional_options.extend(["-s", values["resolution"]])
-		if values["xspd"] != "":
-			try:
-				xspd = float(values["xspd"])
-				additional_options.extend(["-vf", f"setpts=PTS/{xspd}", "-af", f"atempo={xspd}"])
-			except:
-				logging.error("無効な倍速値: %s" % values["xspd"])
-				return
+                if event == "run":
+                    self.on_buttonBTM_changed(values)
+        logging.info("アプリ終了")
 
-		# ファイル上書きするか
-		if os.path.exists(output_file_path):
-			ret = sg.popup_yes_no(f"{output_file_path} は既に存在します。上書きしますか？")
-			if ret == "No":
-				logging.error("出力ファイル名を変更してください")
-				return # 実行しない
-			additional_options.extend(["-y"])
+    def on_buttonBTM_changed(self, values) -> None:
 
-		COMMAND = []
-		COMMAND.extend(["ffmpeg", "-i", f"\"{input_file_path}\""])
-		COMMAND.extend(additional_options)
-		COMMAND.extend(["-hide_banner", f"\"{output_file_path}\""])
-		
-		# スレッドを立ち上げてffmpegコマンド実行
-		t = threading.Thread(target=self.RunEncode, args=(COMMAND,))
-		t.daemon = True
-		t.start()
-	
-	def RunEncode(self, command_list):
-		try:
-			cmd = " ".join(command_list)
-			logging.info(f"command:\t{cmd}")
-			subprocess.run(cmd, shell=True)
-			logging.info("エンコード完了")	
+        input_file_path = values["input_file_path"]
+        output_file_path = values["output_file_path"]
 
-		except Exception as e:
-			logging.error("変換エラー:", e)
+        if output_file_path == "":
+            p1 = os.path.dirname(input_file_path)
+            p2 = os.path.basename(input_file_path)
+            output_file_path = f"{p1}/out_{p2}"
 
-if __name__ == '__main__':
-	gui = MainGui()
-	gui.start()
+        additional_options = []
+        if values["resolution"] != "":
+            additional_options.extend(["-s", values["resolution"]])
+        if values["xspd"] != "":
+            try:
+                xspd = float(values["xspd"])
+                additional_options.extend(
+                    ["-vf", f"setpts=PTS/{xspd}", "-af", f"atempo={xspd}"]
+                )
+            except:
+                logging.error("無効な倍速値: %s" % values["xspd"])
+                return
+
+        # ファイル上書きするか
+        if os.path.exists(output_file_path):
+            ret = sg.popup_yes_no(f"{output_file_path} は既に存在します。上書きしますか？")
+            if ret == "No":
+                logging.error("出力ファイル名を変更してください")
+                return  # 実行しない
+            additional_options.extend(["-y"])
+
+        COMMAND: list[str] = []
+        COMMAND.extend(["ffmpeg", "-i", f'"{input_file_path}"'])
+        COMMAND.extend(additional_options)
+        COMMAND.extend(["-hide_banner", f'"{output_file_path}"'])
+
+        # スレッドを立ち上げてffmpegコマンド実行
+        t = threading.Thread(target=self.RunEncode, args=(COMMAND,))
+        t.daemon = True
+        t.start()
+
+    def RunEncode(self, command_list: list[str]) -> None:
+        try:
+            cmd = " ".join(command_list)
+            logging.info(f"command:\t{cmd}")
+            subprocess.run(cmd, shell=True)
+            logging.info("エンコード完了")
+
+        except Exception as e:
+            logging.error("変換エラー:", e)
+
+
+if __name__ == "__main__":
+    gui = MainGui()
+    gui.start()
