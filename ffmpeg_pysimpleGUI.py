@@ -5,7 +5,7 @@ import subprocess
 import threading
 
 import PySimpleGUI as sg
-from PySimpleGUI import Window
+from PySimpleGUI import Element, Window
 
 resolution_16_9 = ["1920x1080", "1280x720", "720x406"]
 
@@ -14,7 +14,7 @@ base_dir = os.path.dirname(os.path.realpath(__file__))
 
 class MainGui:
     def __init__(self) -> None:
-        self.layout = []
+        self.layout: list[Element] = []
 
         # 入力ファイル名設定
         self.label_in = sg.Text("入力ファイル名")
